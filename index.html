@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Our Chat Memories</title>
+  <meta name="description" content="A private, beautiful memory viewer for your favorite conversations.">
+  
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/chat.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="stylesheet" href="css/print.css">
+
+  <script src="vendor/jszip.min.js"></script>
+</head>
+<body>
+
+  <!-- Landing Screen (Source File List + File Upload) -->
+  <div id="landing-screen" class="landing-container">
+    <div class="landing-card">
+      <div class="landing-icon">♡</div>
+      <p class="landing-kicker">Private memory archive</p>
+      <h1 class="landing-title">Our Chat Memories</h1>
+      <p class="landing-subtitle">
+        Turn your old conversations into a quiet little place for smiles, dates, inside jokes, and all the words worth keeping.
+      </p>
+
+      <!-- Section A: Source Files List from Local Folder -->
+      <div id="source-files-section" class="source-files-container">
+        <h3 class="source-files-header">
+          Open a saved memory
+        </h3>
+        <div id="source-files-list" class="source-files-list">
+          <p class="source-files-empty">
+            Looking for saved memories...
+          </p>
+        </div>
+      </div>
+
+      <div class="section-divider">
+        <span>OR ADD A NEW ONE</span>
+      </div>
+
+      <!-- Section B: Drag and Drop & Manual File Upload -->
+      <div class="upload-dropzone" id="upload-dropzone">
+        <div class="upload-icon">✦</div>
+        <p><strong>Drop your chat file here</strong></p>
+        <p style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">or choose a file from this device</p>
+        <input type="file" id="file-input" class="file-input" accept=".txt,.zip">
+        <label for="file-input" class="btn btn-primary btn-file-trigger">
+          Choose File (.txt or .zip)
+        </label>
+      </div>
+
+      <div class="privacy-notice">
+        <strong>Only yours:</strong> Everything opens locally in this browser. No upload, no cloud copy, no outside storage.
+      </div>
+
+      <div id="parse-progress" class="parse-progress hidden">
+        <div class="progress-label" id="progress-label">Parsing chat...</div>
+        <div class="progress-bar-track">
+          <div class="progress-bar-fill" id="progress-bar-fill"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Application Dashboard -->
+  <div id="app-dashboard" class="app-dashboard hidden">
+    
+    <!-- Top Header Bar -->
+    <header class="app-header">
+      <div class="brand-section">
+        <span class="app-logo">♡</span>
+        <div class="app-title-group">
+          <h1 id="chat-title-display">Chat Memories</h1>
+          <p id="chat-subtitle-display">Loading chat data...</p>
+        </div>
+      </div>
+
+      <div class="header-controls">
+        <!-- Privacy Badge -->
+        <button id="privacy-badge-btn" class="privacy-badge" title="View Privacy Assurance">
+          🔒 Local Only
+        </button>
+
+        <!-- "Who are you?" Me Selector -->
+        <select id="me-sender-select" class="select-input" title="Select yourself to align your sent messages right">
+          <option value="none">Who are you? (Select Me)</option>
+        </select>
+
+        <!-- Swap Left/Right Messages Button -->
+        <button id="swap-alignment-btn" class="btn btn-secondary" title="Swap who appears on the Right vs Left">
+          ↔️ Swap Right/Left
+        </button>
+
+        <button id="new-chat-btn" class="btn btn-secondary">＋ New Memory</button>
+        <button id="export-btn" class="btn btn-primary">📥 Save / Print</button>
+        <button id="diagnostics-btn" class="btn btn-secondary" title="Parser Diagnostics & Test Suite">🛠️ Diagnostics</button>
+        <button id="theme-toggle-btn" class="btn btn-secondary">☀️ Light</button>
+      </div>
+    </header>
+
+    <!-- 3-Pane Dashboard Content -->
+    <div class="dashboard-container">
+      
+      <!-- Left Sidebar Pane -->
+      <aside class="pane-sidebar">
+        <!-- View Tabs -->
+        <div style="padding: 12px; border-bottom: 1px solid var(--border-color); display: flex; gap: 8px;">
+          <button id="tab-chat-btn" class="btn btn-secondary active" style="flex: 1;">💬 Chat View</button>
+          <button id="tab-stats-btn" class="btn btn-secondary" style="flex: 1;">📊 Statistics</button>
+        </div>
+
+        <!-- Date Format Ambiguity Settings -->
+        <div style="padding: 12px; border-bottom: 1px solid var(--border-color);">
+          <label style="font-size: 11px; color: var(--text-secondary); display: block; margin-bottom: 4px;">
+            Date Interpretation:
+          </label>
+          <select id="date-mode-select" class="select-input" style="width: 100%;">
+            <option value="auto">Auto-detect (Recommended)</option>
+            <option value="dd/mm">DD/MM/YYYY (Day First)</option>
+            <option value="mm/dd">MM/DD/YYYY (Month First)</option>
+          </select>
+        </div>
+
+        <!-- Jump to Date Picker -->
+        <div style="padding: 12px; border-bottom: 1px solid var(--border-color);">
+          <label style="font-size: 11px; color: var(--text-secondary); display: block; margin-bottom: 4px;">
+            Jump to Date:
+          </label>
+          <input type="date" id="jump-date-picker" class="date-input" style="width: 100%;">
+        </div>
+
+        <!-- Year/Month Timeline Navigation -->
+        <div style="padding: 12px; flex: 1; overflow-y: auto;" id="sidebar-timeline-container">
+          <h3 style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; text-transform: uppercase;">
+            📅 Timeline Navigation
+          </h3>
+          <div id="timeline-tree-container"></div>
+        </div>
+      </aside>
+
+      <!-- Center Main Content Pane -->
+      <main class="pane-main">
+        
+        <!-- Search & Toolbar Header -->
+        <div class="toolbar-header">
+          <div class="toolbar-row">
+            <div class="search-box">
+              <span>🔍</span>
+              <input type="text" id="search-input" placeholder="Search messages, text, or sender names...">
+              <span id="search-count-label" class="search-count"></span>
+              <button id="search-prev-btn" class="search-nav-btn" disabled title="Previous Match">↑</button>
+              <button id="search-next-btn" class="search-nav-btn" disabled title="Next Match">↓</button>
+            </div>
+            <button id="mobile-filter-toggle" class="btn btn-secondary filter-toggle-btn" type="button" aria-expanded="false" aria-controls="filter-bar">
+              Filter
+            </button>
+          </div>
+
+          <!-- Multi-Criteria Filters -->
+          <div id="filter-bar" class="filter-bar">
+            <select id="filter-participant" class="select-input">
+              <option value="all">All Participants</option>
+            </select>
+
+            <select id="filter-type" class="select-input">
+              <option value="all">All Types</option>
+              <option value="text">Text Messages</option>
+              <option value="media">Media Attachments</option>
+              <option value="system">System Entries</option>
+              <option value="links">Links Only</option>
+            </select>
+
+            <input type="date" id="filter-from-date" class="date-input" title="From Date">
+            <span style="font-size: 12px; color: var(--text-secondary);">→</span>
+            <input type="date" id="filter-to-date" class="date-input" title="To Date">
+
+            <button id="filter-reset-btn" class="btn btn-secondary" style="padding: 5px 10px; font-size: 11px;">Reset</button>
+          </div>
+        </div>
+
+        <!-- Chat Messages Virtual Scroll Container -->
+        <div id="chat-main-pane" class="chat-viewport-container">
+          <div id="chat-viewport"></div>
+        </div>
+
+        <!-- Statistics Tab Main View Container -->
+        <div id="stats-main-pane" class="hidden stats-pane">
+          <div id="stats-container"></div>
+        </div>
+      </main>
+
+      <!-- Right Side Info Pane (Desktop) -->
+      <aside class="pane-details">
+        <div class="details-panel-header">
+          <h3>ℹ️ Quick Summary</h3>
+        </div>
+        <div id="quick-summary-box" class="quick-summary-box">
+          <p>Load a chat to view instant participant summaries, total counts, and media breakdowns here.</p>
+        </div>
+      </aside>
+    </div>
+
+    <!-- Mobile Bottom Navigation -->
+    <nav class="mobile-bottom-nav">
+      <div class="mobile-nav-item active" data-target="chat">
+        <span class="nav-icon">♥</span>
+        <span>Memories</span>
+      </div>
+      <div class="mobile-nav-item" data-target="search">
+        <span class="nav-icon">⌕</span>
+        <span>Find</span>
+      </div>
+      <div class="mobile-nav-item" data-target="stats">
+        <span class="nav-icon">✦</span>
+        <span>Moments</span>
+      </div>
+      <div class="mobile-nav-item" data-target="timeline">
+        <span class="nav-icon">◷</span>
+        <span>Dates</span>
+      </div>
+    </nav>
+  </div>
+
+  <!-- Message Details Modal -->
+  <div id="details-modal" class="modal-backdrop">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>💬 Message Details</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- Export Modal -->
+  <div id="export-modal" class="modal-backdrop">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>📥 Export Chat Data</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="export-count-label" style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;"></p>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <button class="btn btn-secondary export-txt-btn" style="justify-content: flex-start;">📄 Export as Plain Text (.txt)</button>
+          <button class="btn btn-secondary export-json-btn" style="justify-content: flex-start;">JSON Export as Structured JSON (.json)</button>
+          <button class="btn btn-secondary export-csv-btn" style="justify-content: flex-start;">📊 Export as Tabular CSV (.csv)</button>
+          <button class="btn btn-primary export-print-btn" style="justify-content: flex-start; margin-top: 10px;">🖨️ Print / Save as PDF</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Privacy Modal -->
+  <div id="privacy-modal" class="modal-backdrop">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>🔒 Privacy Assurance</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- Diagnostics & Test Suite Modal -->
+  <div id="diagnostics-modal" class="modal-backdrop">
+    <div class="modal-card" style="max-width: 700px;">
+      <div class="modal-header">
+        <h3>🛠️ Parser Diagnostics & Automated Tests</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body"></div>
+    </div>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

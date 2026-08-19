@@ -1,0 +1,46 @@
+/* PDF & Browser Print Stylesheet */
+
+@media print {
+  body {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    overflow: visible !important;
+  }
+
+  .app-header, .toolbar-header, .pane-sidebar, .pane-details, .mobile-bottom-nav, .modal-backdrop {
+    display: none !important;
+  }
+
+  .dashboard-container {
+    display: block !important;
+    height: auto !important;
+  }
+
+  .pane-main {
+    overflow: visible !important;
+  }
+
+  .chat-viewport-container {
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  .chat-bubble {
+    border: 1px solid #ccc !important;
+    background: #fff !important;
+    color: #000 !important;
+    page-break-inside: avoid;
+  }
+
+  .stats-dashboard {
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  .stats-section {
+    border: 1px solid #ccc !important;
+    background: #fff !important;
+    color: #000 !important;
+    page-break-inside: avoid;
+  }
+}
